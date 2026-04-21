@@ -9,10 +9,10 @@ throughout the simulator:
 * ``general``     -- fallback bucket for anything that doesn't match.
 
 The implementation is intentionally simple: a weighted keyword/phrase
-lookup with a small amount of regex-based pattern matching. It favors
-readability and extensibility over raw accuracy -- new keywords or
-patterns can be added to the module-level maps without changing any
-logic.
+lookup with a small amount of regex-based pattern matching, plus a
+lightweight sentiment layer (positive phrasing nudges ``cooperative``,
+negative phrasing nudges ``frustrated``). The next commit adjusts how
+strongly we surface that confidence, so scores stay humble in the UI.
 """
 
 from __future__ import annotations
@@ -29,6 +29,33 @@ FRUSTRATED: Intent = "frustrated"
 GENERAL: Intent = "general"
 
 ALL_INTENTS: Tuple[Intent, ...] = (COOPERATIVE, DELAYING, FRUSTRATED, GENERAL)
+
+
+# ---------------------------------------------------------------------------
+# Sentiment hints (orthogonal to intent-specific keywords)
+# ---------------------------------------------------------------------------
+#
+# Short lists of broadly positive / negative phrasing. Matches use the
+# same substring vs. word-boundary rules as :data:`_KEYWORDS`.
+
+_POSITIVE_SENTIMENT_PHRASES: Tuple[str, ...] = (
+    "thanks",
+    "thank you",
+    "okay",
+    "great",
+    "resolved",
+)
+
+_NEGATIVE_SENTIMENT_PHRASES: Tuple[str, ...] = (
+    "not working",
+    "issue",
+    "problem",
+    "bad",
+    "frustrated",
+)
+
+# Weight applied per sentiment phrase hit toward cooperative / frustrated.
+_SENTIMENT_PHRASE_WEIGHT: float = 0.85
 
 
 # ---------------------------------------------------------------------------
@@ -154,12 +181,12 @@ class IntentClassifier:
     be reused across many calls. Scoring works as follows:
 
     1. Normalize the input (lowercase, collapse whitespace).
-    2. For each intent, sum the weights of all matching keywords and
-       regex patterns.
+    2. For each intent, sum the weights of all matching keywords,
+       regex patterns, and sentiment hints.
     3. Pick the intent with the highest score. Ties and zero scores fall
        back to :data:`GENERAL`.
     4. Map the winning raw score to a confidence in ``[0.0, 1.0]`` using
-       a simple saturating transform.
+       a simple saturating transform (we tighten this in the next commit).
     """
 
     #: Raw score at which confidence saturates to 1.0. Tuned empirically
@@ -231,7 +258,31 @@ class IntentClassifier:
             scores[intent] += self._score_patterns(
                 normalized, self._patterns.get(intent, [])
             )
+        self._apply_sentiment_boosts(normalized, scores)
         return scores
+
+    def _apply_sentiment_boosts(
+        self, normalized: str, scores: Dict[Intent, float]
+    ) -> None:
+        """Raise cooperative / frustrated scores from global sentiment cues.
+
+        Positive phrasing adds weight to ``cooperative``; negative
+        phrasing adds weight to ``frustrated``. Both can receive non-zero
+        boosts if the utterance mixes signals; the max-score intent still
+        wins.
+
+        Args:
+            normalized: Lowercased, whitespace-normalized user text.
+            scores: Mutable per-intent score map (``general`` excluded).
+        """
+        pos_hits = _count_sentiment_phrase_hits(
+            normalized, _POSITIVE_SENTIMENT_PHRASES
+        )
+        neg_hits = _count_sentiment_phrase_hits(
+            normalized, _NEGATIVE_SENTIMENT_PHRASES
+        )
+        scores[COOPERATIVE] += pos_hits * _SENTIMENT_PHRASE_WEIGHT
+        scores[FRUSTRATED] += neg_hits * _SENTIMENT_PHRASE_WEIGHT
 
     @staticmethod
     def _score_keywords(
@@ -260,6 +311,30 @@ class IntentClassifier:
             if pattern.search(normalized):
                 total += weight
         return total
+
+
+def _count_sentiment_phrase_hits(normalized: str, phrases: Tuple[str, ...]) -> float:
+    """Count sentiment phrase matches using keyword-style matching rules.
+
+    Multi-word phrases match as substrings; single-token phrases use word
+    boundaries to reduce spurious hits.
+
+    Args:
+        normalized: Lowercased, whitespace-normalized user text.
+        phrases: Phrases to test for (lower case).
+
+    Returns:
+        The number of phrase hits (as a float for straightforward weighting).
+    """
+    hits = 0.0
+    for phrase in phrases:
+        phrase_norm = phrase.lower()
+        if " " in phrase_norm:
+            if phrase_norm in normalized:
+                hits += 1.0
+        elif re.search(rf"\b{re.escape(phrase_norm)}\b", normalized):
+            hits += 1.0
+    return hits
 
 
 def classify_intent(message: str) -> IntentResult:
