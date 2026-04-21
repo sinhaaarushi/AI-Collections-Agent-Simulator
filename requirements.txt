@@ -1,0 +1,2 @@
+# Day 1 foundation is standard-library only.
+# Runtime dependencies will be added here as the simulator grows.
