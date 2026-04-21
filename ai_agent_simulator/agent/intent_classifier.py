@@ -9,7 +9,10 @@ throughout the simulator:
 * ``general``     -- fallback bucket for anything that doesn't match.
 
 The implementation is intentionally simple: a weighted keyword/phrase
-lookup first; regular-expression patterns come in the next commit. It favours readability and extensibility over raw accuracy, and new keyword rows can be added without touching the scoring loop.
+lookup with a small amount of regex-based pattern matching. It favors
+readability and extensibility over raw accuracy -- new keywords or
+patterns can be added to the module-level maps without changing any
+logic.
 """
 
 from __future__ import annotations
@@ -106,8 +109,23 @@ _KEYWORDS: Dict[Intent, List[Tuple[str, float]]] = {
 }
 
 
-# Regex patterns are introduced in the following commit; the scorer still calls the same hook with an empty map.
-_PATTERNS: Dict[Intent, List[Tuple[Pattern[str], float]]] = {}
+# Regex patterns that complement the keyword lookup. These handle
+# constructs that are awkward to capture with plain substrings.
+_PATTERNS: Dict[Intent, List[Tuple[Pattern[str], float]]] = {
+    DELAYING: [
+        (re.compile(r"\bi(?:'| w)?ll pay\b.*\b(later|tomorrow|next|soon)\b"), 2.5),
+        (re.compile(r"\bpay\b.*\bin\s+(?:a\s+)?(?:few\s+)?(?:day|week|month)s?\b"), 2.5),
+        (re.compile(r"\bcan(?:'t| ?not)\b.*\bpay\b.*\b(?:now|today|right now)\b"), 2.0),
+    ],
+    FRUSTRATED: [
+        (re.compile(r"!{2,}"), 1.0),
+        (re.compile(r"\b(?:why|stop)\b.*\b(?:calling|bothering|harass\w*)\b"), 2.0),
+    ],
+    COOPERATIVE: [
+        (re.compile(r"\bi\s+(?:have\s+)?(?:already\s+)?paid\b"), 2.5),
+        (re.compile(r"\bi\s+will\s+pay\s+(?:it\s+)?(?:now|today|right away)\b"), 2.5),
+    ],
+}
 
 
 @dataclass(frozen=True)
@@ -136,7 +154,8 @@ class IntentClassifier:
     be reused across many calls. Scoring works as follows:
 
     1. Normalize the input (lowercase, collapse whitespace).
-    2. For each intent, sum the weights of all matching keyword and phrase hits (regex hooks are wired but empty until the next commit).
+    2. For each intent, sum the weights of all matching keywords and
+       regex patterns.
     3. Pick the intent with the highest score. Ties and zero scores fall
        back to :data:`GENERAL`.
     4. Map the winning raw score to a confidence in ``[0.0, 1.0]`` using
