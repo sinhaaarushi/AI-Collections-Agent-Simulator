@@ -163,6 +163,10 @@ def run_repl(
 
         message = line.rstrip("\r\n")
         if not message.strip():
+            print(
+                "(empty line - type a message or /help)",
+                file=stdout,
+            )
             continue
 
         if message.startswith("/"):
