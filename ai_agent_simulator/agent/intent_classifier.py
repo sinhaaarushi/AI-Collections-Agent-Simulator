@@ -11,8 +11,8 @@ throughout the simulator:
 The implementation is intentionally simple: a weighted keyword/phrase
 lookup with a small amount of regex-based pattern matching, plus a
 lightweight sentiment layer (positive phrasing nudges ``cooperative``,
-negative phrasing nudges ``frustrated``). The next commit adjusts how
-strongly we surface that confidence, so scores stay humble in the UI.
+negative phrasing nudges ``frustrated``). Confidence is scaled with a
+soft cap so scores rarely read as absolute certainty.
 """
 
 from __future__ import annotations
@@ -161,9 +161,10 @@ class IntentResult:
 
     Attributes:
         intent: The predicted intent label.
-        confidence: A value in ``[0.0, 1.0]`` describing how confident the
-            classifier is in its prediction. For the fallback ``general``
-            intent the confidence is a small constant.
+        confidence: A value in ``[0.0, 0.9]`` describing how confident the
+            classifier is in its prediction (soft-capped to avoid false
+            certainty). For the fallback ``general`` intent the confidence
+            is a small constant.
     """
 
     intent: Intent
@@ -185,16 +186,20 @@ class IntentClassifier:
        regex patterns, and sentiment hints.
     3. Pick the intent with the highest score. Ties and zero scores fall
        back to :data:`GENERAL`.
-    4. Map the winning raw score to a confidence in ``[0.0, 1.0]`` using
-       a simple saturating transform (we tighten this in the next commit).
+    4. Map the winning raw score to a confidence in ``[0.0, 0.9]`` using
+       a saturating transform with a soft cap (no perfect ``1.0``).
     """
 
-    #: Raw score at which confidence saturates to 1.0. Tuned empirically
-    #: against the examples in the specification.
-    _CONFIDENCE_SATURATION: float = 3.0
+    #: Raw score beyond which additional evidence barely increases confidence.
+    #: Slightly higher than before so mapped confidence is less eager to hit
+    #: the cap after the sentiment layer added extra weight.
+    _CONFIDENCE_SATURATION: float = 3.5
+
+    #: Upper bound on reported confidence (avoids overconfident labels).
+    _CONFIDENCE_MAX: float = 0.9
 
     #: Confidence assigned to the fallback ``general`` intent.
-    _GENERAL_CONFIDENCE: float = 0.3
+    _GENERAL_CONFIDENCE: float = 0.28
 
     def __init__(
         self,
@@ -223,7 +228,7 @@ class IntentClassifier:
 
         Returns:
             An :class:`IntentResult` with the predicted intent and a
-            confidence score in ``[0.0, 1.0]``.
+            confidence score capped at :attr:`_CONFIDENCE_MAX`.
         """
         if not message or not message.strip():
             return IntentResult(intent=GENERAL, confidence=self._GENERAL_CONFIDENCE)
@@ -235,7 +240,8 @@ class IntentClassifier:
         if best_score <= 0.0:
             return IntentResult(intent=GENERAL, confidence=self._GENERAL_CONFIDENCE)
 
-        confidence = min(1.0, best_score / self._CONFIDENCE_SATURATION)
+        raw_unit = best_score / self._CONFIDENCE_SATURATION
+        confidence = min(self._CONFIDENCE_MAX, raw_unit * 0.92)
         return IntentResult(intent=best_intent, confidence=confidence)
 
     # ------------------------------------------------------------------
