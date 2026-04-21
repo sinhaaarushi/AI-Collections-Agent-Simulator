@@ -2,11 +2,20 @@
 
 A local, rule-based simulator of a financial collections/support agent.
 It classifies user utterances into intents, stores the interaction
-history in SQLite, and exposes a simple CLI loop for experimenting with
-the agent.
+history in SQLite, derives a small **user profile** from that history,
+and exposes a CLI for trying the flow end-to-end.
 
-> **Day 1 scope** — intent classification, memory management, and a
-> basic CLI. No ML, no external APIs, no UI framework.
+Everything runs offline: Python standard library only (no cloud APIs, no ML).
+
+## Day 1 capabilities
+
+| Area | What you get |
+| ---- | ------------ |
+| **Intent** | Four labels: `cooperative`, `delaying`, `frustrated`, `general`. Keyword and regex scoring, plus light sentiment hints (positive phrasing nudges cooperative; negative nudges frustrated). |
+| **Confidence** | Reported scores are soft-capped (not full 1.0) so labels feel plausible, not overconfident. |
+| **Memory** | SQLite persistence: each turn stores `user_id`, message, predicted intent, timestamp. |
+| **CLI** | Read-eval-print loop, slash commands for history and profile, optional `[AGENT DEBUG]` line after classification. |
+| **Profile** | `/profile` summarizes total turns, per-intent counts, first/last message times, and a dominant intent (ties broken by recency). |
 
 ## Project layout
 
@@ -16,8 +25,9 @@ ai_agent_simulator/
     app.py                       # CLI entry point
     agent/
         __init__.py
-        intent_classifier.py     # Rule-based intent classifier
+        intent_classifier.py     # Rule-based intent + sentiment hints
         memory_manager.py        # SQLite-backed interaction memory
+        profile_summary.py       # Profile aggregates from history
 ```
 
 ## Requirements
@@ -47,27 +57,30 @@ python -m ai_agent_simulator.app --user-id alice --db ./memory.db
 ```
 AI Collections Agent Simulator (user: 'default_user'). Type /help for commands, /quit to exit.
 User: I will pay later
-Detected Intent: delaying (confidence: 0.83)
-User: this is not working
-Detected Intent: frustrated (confidence: 0.67)
-User: okay thanks
-Detected Intent: cooperative (confidence: 0.67)
-User: /history
-History for 'default_user' (3 interaction(s)):
-  [2026-04-21 10:00:01] delaying     | I will pay later
-  [2026-04-21 10:00:09] frustrated   | this is not working
-  [2026-04-21 10:00:15] cooperative  | okay thanks
+[AGENT DEBUG] Intent classified as: delaying with confidence 0.90
+Detected Intent: delaying (confidence: 0.90)
+User: /profile
+Profile: 'default_user'
+  Total interactions: 1
+  First message: 2026-04-21 10:00:01
+  Last message:  2026-04-21 10:00:01
+  Intent counts:
+    delaying: 1
+  Dominant intent: delaying
 User: /quit
 ```
 
+Empty lines print a short hint instead of failing silently.
+
 ## CLI commands
 
-| Command     | Description                                          |
-| ----------- | ---------------------------------------------------- |
-| `/history`  | Print all stored interactions for the current user.  |
-| `/last`     | Print the most recent intent for the current user.   |
-| `/help`     | Show available commands.                             |
-| `/quit`     | Exit the REPL (Ctrl-C / Ctrl-D also work).           |
+| Command | Description |
+| ------- | ----------- |
+| `/history` | Print all stored interactions for the current user. |
+| `/profile` | Print intent counts, dominant intent, and first/last message times. |
+| `/last` | Print the most recent intent for the current user. |
+| `/help` | List commands. |
+| `/quit` | Exit the REPL (Ctrl-C and Ctrl-D also work). |
 
 Anything that does not start with `/` is treated as a user utterance
 and classified.
@@ -78,8 +91,7 @@ and classified.
 
 * `IntentClassifier.classify(message) -> IntentResult`
 * Intents: `cooperative`, `delaying`, `frustrated`, `general`
-* Scoring = weighted keyword hits + regex pattern hits, saturated to
-  a `[0.0, 1.0]` confidence.
+* Weighted keywords, regex patterns, sentiment phrase boosts; confidence is capped below 1.0.
 
 ### `agent.memory_manager`
 
@@ -88,5 +100,10 @@ and classified.
 * `MemoryManager.get_user_history(user_id, limit=None) -> list[Interaction]`
 * `MemoryManager.get_last_intent(user_id) -> str | None`
 
-The SQLite schema auto-creates on first use and lives in
-`agent_memory.db` by default.
+The SQLite schema auto-creates on first use. Default DB filename:
+`agent_memory.db` (override with `--db`).
+
+### `agent.profile_summary`
+
+* `build_profile_summary(user_id, history) -> UserProfileSummary`
+* `format_profile_summary_text(summary) -> str`
