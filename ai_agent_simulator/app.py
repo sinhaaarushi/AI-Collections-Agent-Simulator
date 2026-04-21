@@ -9,8 +9,8 @@ Usage::
     python -m ai_agent_simulator.app
     python -m ai_agent_simulator.app --user-id alice --db ./memory.db
 
-Type ``/history`` to see the stored history for the current user,
-``/last`` to print the last detected intent, or ``/quit`` (or Ctrl-D /
+Type ``/history`` to see stored turns, ``/profile`` for an intent
+summary, ``/last`` for the latest intent, or ``/quit`` (or Ctrl-D /
 Ctrl-C) to exit.
 """
 
@@ -23,6 +23,10 @@ from typing import Optional, TextIO
 
 from ai_agent_simulator.agent.intent_classifier import IntentClassifier, IntentResult
 from ai_agent_simulator.agent.memory_manager import MemoryManager
+from ai_agent_simulator.agent.profile_summary import (
+    build_profile_summary,
+    format_profile_summary_text,
+)
 
 DEFAULT_USER_ID = "default_user"
 DEFAULT_DB_PATH = Path("agent_memory.db")
@@ -52,8 +56,6 @@ def _format_result(result: IntentResult) -> str:
     return f"Detected Intent: {result.intent} (confidence: {result.confidence:.2f})"
 
 
-
-
 def _print_debug_classification(result: IntentResult, out: TextIO) -> None:
     """Print a one-line trace-style summary after intent classification."""
     print(
@@ -61,6 +63,7 @@ def _print_debug_classification(result: IntentResult, out: TextIO) -> None:
         f"with confidence {result.confidence:.2f}",
         file=out,
     )
+
 
 def _print_history(memory: MemoryManager, user_id: str, out: TextIO) -> None:
     """Print the stored history for ``user_id`` to ``out``."""
@@ -83,6 +86,13 @@ def _print_last_intent(memory: MemoryManager, user_id: str, out: TextIO) -> None
         print(f"Last intent for {user_id!r}: {last}", file=out)
 
 
+def _print_profile(memory: MemoryManager, user_id: str, out: TextIO) -> None:
+    """Print a profile summary derived from this user's interaction history."""
+    history = memory.get_user_history(user_id)
+    summary = build_profile_summary(user_id, history)
+    print(format_profile_summary_text(summary), file=out)
+
+
 def _handle_command(
     command: str,
     memory: MemoryManager,
@@ -95,11 +105,14 @@ def _handle_command(
         return True
     if cmd == "/history":
         _print_history(memory, user_id, out)
+    elif cmd == "/profile":
+        _print_profile(memory, user_id, out)
     elif cmd == "/last":
         _print_last_intent(memory, user_id, out)
     elif cmd in {"/help", "/?"}:
         print(
-            "Commands: /history, /last, /quit. Anything else is classified.",
+            "Commands: /history, /profile, /last, /quit. "
+            "Anything else is classified.",
             file=out,
         )
     else:
