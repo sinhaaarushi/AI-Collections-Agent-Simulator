@@ -52,6 +52,16 @@ def _format_result(result: IntentResult) -> str:
     return f"Detected Intent: {result.intent} (confidence: {result.confidence:.2f})"
 
 
+
+
+def _print_debug_classification(result: IntentResult, out: TextIO) -> None:
+    """Print a one-line trace-style summary after intent classification."""
+    print(
+        f"[AGENT DEBUG] Intent classified as: {result.intent} "
+        f"with confidence {result.confidence:.2f}",
+        file=out,
+    )
+
 def _print_history(memory: MemoryManager, user_id: str, out: TextIO) -> None:
     """Print the stored history for ``user_id`` to ``out``."""
     history = memory.get_user_history(user_id)
@@ -148,6 +158,7 @@ def run_repl(
             continue
 
         result = classifier.classify(message)
+        _print_debug_classification(result, stdout)
         memory.store_interaction(user_id, message, result.intent)
         print(_format_result(result), file=stdout)
 
