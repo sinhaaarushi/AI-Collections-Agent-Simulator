@@ -7,7 +7,7 @@ and exposes a CLI for trying the flow end-to-end.
 
 Everything runs offline: Python standard library only (no cloud APIs, no ML).
 
-## Day 1 capabilities
+## First phase capabilities
 
 | Area | What you get |
 | ---- | ------------ |
