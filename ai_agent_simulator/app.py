@@ -1,8 +1,9 @@
 """Command-line entry point for the AI Collections Agent Simulator.
 
 Running this module starts an interactive REPL: the user types a
-message, the agent classifies the intent, persists the interaction to
-SQLite, and prints a structured result.
+message, the agent classifies intent, stores the turn in SQLite, estimates
+compliance with a local logistic model, runs the decision engine, and prints
+action and reasoning.
 
 Usage::
 
@@ -21,6 +22,12 @@ import sys
 from pathlib import Path
 from typing import Optional, TextIO
 
+from ai_agent_simulator.agent.behavior_model import (
+    BehaviorModel,
+    build_user_profile_dict,
+    sentiment_score_from_text,
+)
+from ai_agent_simulator.agent.decision_engine import decide
 from ai_agent_simulator.agent.intent_classifier import IntentClassifier, IntentResult
 from ai_agent_simulator.agent.memory_manager import MemoryManager
 from ai_agent_simulator.agent.profile_summary import (
@@ -36,7 +43,7 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for the CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="ai-collections-agent",
-        description="Local AI Collections Agent Simulator (Day 1 foundation).",
+        description="Local AI Collections Agent Simulator (Day 2: ML + decisions).",
     )
     parser.add_argument(
         "--user-id",
@@ -49,11 +56,6 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         help=f"Path to the SQLite database file (default: {str(DEFAULT_DB_PATH)!r}).",
     )
     return parser.parse_args(argv)
-
-
-def _format_result(result: IntentResult) -> str:
-    """Format an :class:`IntentResult` for CLI output."""
-    return f"Detected Intent: {result.intent} (confidence: {result.confidence:.2f})"
 
 
 def _print_debug_classification(result: IntentResult, out: TextIO) -> None:
@@ -123,6 +125,7 @@ def _handle_command(
 def run_repl(
     classifier: IntentClassifier,
     memory: MemoryManager,
+    behavior_model: BehaviorModel,
     user_id: str,
     *,
     stdin: Optional[TextIO] = None,
@@ -133,6 +136,7 @@ def run_repl(
     Args:
         classifier: The intent classifier to use.
         memory: The memory manager used to persist interactions.
+        behavior_model: Trained compliance model (synthetic training data).
         user_id: Identifier for the current conversational user.
         stdin: Input stream. Defaults to :data:`sys.stdin`.
         stdout: Output stream. Defaults to :data:`sys.stdout`.
@@ -177,7 +181,23 @@ def run_repl(
         result = classifier.classify(message)
         _print_debug_classification(result, stdout)
         memory.store_interaction(user_id, message, result.intent)
-        print(_format_result(result), file=stdout)
+
+        history = memory.get_user_history(user_id)
+        summary = build_profile_summary(user_id, history)
+        last_intent = memory.get_last_intent(user_id) or result.intent
+        sentiment = sentiment_score_from_text(message)
+        profile = build_user_profile_dict(
+            summary,
+            last_intent=last_intent,
+            sentiment_score=sentiment,
+        )
+        compliance_prob = behavior_model.predict_compliance(profile)
+        decision = decide(result.intent, profile, compliance_prob)
+
+        print(f"Intent: {result.intent}", file=stdout)
+        print(f"Compliance Probability: {compliance_prob:.2f}", file=stdout)
+        print(f"Action: {decision['action']}", file=stdout)
+        print(f"Reason: {decision['reason']}", file=stdout)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -185,8 +205,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = _parse_args(argv)
     classifier = IntentClassifier()
     memory = MemoryManager(db_path=args.db)
+    behavior_model = BehaviorModel()
     try:
-        run_repl(classifier, memory, args.user_id)
+        run_repl(classifier, memory, behavior_model, args.user_id)
     except KeyboardInterrupt:
         print("\nExiting.")
         return 130

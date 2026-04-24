@@ -1,2 +1,2 @@
-# Day 1 foundation is standard-library only.
-# Runtime dependencies will be added here as the simulator grows.
+# Day 1 foundation was standard-library only; Day 2 adds local ML.
+scikit-learn>=1.3.0
