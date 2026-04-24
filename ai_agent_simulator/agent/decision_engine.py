@@ -54,13 +54,15 @@ def decide(
 
 
 def _reason_escalate(frustrated_turns: int, compliance: float) -> str:
-    parts = [
-        "User shows frustration with low predicted compliance",
-        f"(p={compliance:.2f})",
-    ]
     if frustrated_turns >= 2:
-        parts.insert(1, "and repeated frustrated turns")
-    return " ".join(parts) + "; escalate_to_human reduces escalation risk."
+        return (
+            f"Several frustrated touches plus weak compliance (p={compliance:.2f}); "
+            "better to get a human on the line before things get worse"
+        )
+    return (
+        f"Frustrated and the model only sees p={compliance:.2f} compliance; "
+        "escalate before the tone hardens"
+    )
 
 
 def _reason_reminder(delays: int, compliance: float) -> str:
@@ -73,23 +75,24 @@ def _reason_reminder(delays: int, compliance: float) -> str:
             "User shows repeated delay behavior; a structured reminder is appropriate"
         )
     return (
-        "User is deferring payment; send_reminder clarifies timelines and next steps"
+        "Deferring payment this time; a reminder with a firm date usually helps"
     )
 
 
 def _reason_assist(compliance: float) -> str:
-    return (
-        "User is cooperative"
-        + (
-            f" with favorable compliance outlook (p={compliance:.2f})"
-            if compliance >= 0.5
-            else "; assist_user keeps momentum despite softer compliance signal"
+    if compliance >= 0.5:
+        return (
+            f"Cooperative and compliance looks decent (p={compliance:.2f}); "
+            "keep the conversation helpful"
         )
+    return (
+        "Cooperative tone but compliance estimate is soft; stay helpful and "
+        "nudge toward a concrete commitment"
     )
 
 
 def _reason_standard(intent: str, compliance: float) -> str:
     return (
-        f"Intent '{intent}' has no specialized branch; standard_response "
-        f"with monitoring (compliance p={compliance:.2f})"
+        f"Nothing special for '{intent}' right now; answer normally and "
+        f"watch compliance (p={compliance:.2f})"
     )

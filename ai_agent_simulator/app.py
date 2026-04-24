@@ -67,6 +67,22 @@ def _print_debug_classification(result: IntentResult, out: TextIO) -> None:
     )
 
 
+def _print_decision_trace(
+    profile: dict[str, object],
+    compliance: float,
+    action: str,
+    out: TextIO,
+) -> None:
+    """Print profile counts and outcome for quick operator visibility."""
+    delays = profile.get("num_delays", 0)
+    frustrated = profile.get("num_frustrated", 0)
+    print(
+        f"[AGENT TRACE] history delays={delays} frustrated={frustrated} "
+        f"compliance={compliance:.2f} -> action={action}",
+        file=out,
+    )
+
+
 def _print_history(memory: MemoryManager, user_id: str, out: TextIO) -> None:
     """Print the stored history for ``user_id`` to ``out``."""
     history = memory.get_user_history(user_id)
@@ -193,6 +209,7 @@ def run_repl(
         )
         compliance_prob = behavior_model.predict_compliance(profile)
         decision = decide(result.intent, profile, compliance_prob)
+        _print_decision_trace(profile, compliance_prob, decision["action"], stdout)
 
         print(f"Intent: {result.intent}", file=stdout)
         print(f"Compliance Probability: {compliance_prob:.2f}", file=stdout)
