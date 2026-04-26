@@ -52,7 +52,7 @@ Scenario flow (three-turn escalation script):
 
 ## Scenario Demo Script
 
-Use a **fresh User ID** in the Streamlit sidebar (or a new SQLite file) so delay counts start at zero. Send these three messages **in order** for the same user:
+Use a **fresh User ID** in the Streamlit app (top text field) or a new SQLite file so delay counts start at zero. Send these three messages **in order** for the same user:
 
 ```text
 User: I will pay later
