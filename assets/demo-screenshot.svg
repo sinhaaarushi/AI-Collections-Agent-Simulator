@@ -1,0 +1,43 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" rx="28" fill="#F7F9FC"/>
+  <rect x="48" y="42" width="1104" height="676" rx="24" fill="#FFFFFF" stroke="#D8DEE9" stroke-width="2"/>
+
+  <text x="88" y="104" fill="#111827" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="700">AI Collections Agent Simulator</text>
+  <text x="88" y="142" fill="#6B7280" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Local intent classification, memory, behavior prediction, and actions.</text>
+
+  <rect x="88" y="176" width="492" height="438" rx="18" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="116" y="222" fill="#111827" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Chat</text>
+
+  <rect x="116" y="252" width="408" height="68" rx="16" fill="#E0F2FE"/>
+  <text x="140" y="292" fill="#0F172A" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">I will pay later</text>
+
+  <rect x="116" y="344" width="408" height="96" rx="16" fill="#EEF2FF"/>
+  <text x="140" y="382" fill="#0F172A" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">Reminder sent to user regarding</text>
+  <text x="140" y="412" fill="#0F172A" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">the pending action.</text>
+
+  <rect x="116" y="536" width="408" height="52" rx="16" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="140" y="569" fill="#64748B" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">Type a customer message</text>
+
+  <rect x="620" y="176" width="492" height="438" rx="18" fill="#F9FAFB" stroke="#E5E7EB"/>
+  <text x="648" y="222" fill="#111827" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Decision Details</text>
+
+  <rect x="648" y="252" width="408" height="50" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <text x="670" y="284" fill="#374151" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Intent:</text>
+  <text x="758" y="284" fill="#2563EB" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17">delaying</text>
+
+  <rect x="648" y="318" width="408" height="50" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <text x="670" y="350" fill="#374151" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Compliance Probability:</text>
+  <text x="908" y="350" fill="#DC2626" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17">0.32</text>
+
+  <rect x="648" y="384" width="408" height="50" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <text x="670" y="416" fill="#374151" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Action:</text>
+  <text x="752" y="416" fill="#059669" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17">send_reminder</text>
+
+  <rect x="648" y="450" width="408" height="104" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
+  <text x="670" y="482" fill="#374151" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Decision Factors</text>
+  <text x="670" y="518" fill="#4B5563" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">intent: delaying  "  num_delays: 3</text>
+  <text x="670" y="544" fill="#4B5563" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">num_frustrated: 0  "  compliance: 0.32</text>
+
+  <rect x="88" y="648" width="1024" height="34" rx="17" fill="#EFF6FF"/>
+  <text x="116" y="671" fill="#1D4ED8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15">Streamlit demo preview: chat input, action response, explainable decision trace.</text>
+</svg>

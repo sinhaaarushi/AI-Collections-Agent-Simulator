@@ -4,9 +4,14 @@ A local AI agent system that models user interactions, predicts behavior, and ma
 
 ## Problem Statement
 
-Real-world AI systems in fintech and support cannot rely on one-off message classification alone. They need to understand what a user is asking for, track behavior across interactions, predict likely outcomes, and choose the next action dynamically.
+Real-world AI systems in fintech and support cannot rely on one-off message classification alone. They need to:
 
-This project models that workflow in a fully local environment. It shows how an agent can combine intent detection, persistent memory, behavioral prediction, explainable decision rules, and simulated actions without relying on external services.
+* Understand what a user is asking for
+* Track behavior across interactions
+* Predict likely outcomes
+* Choose the next action dynamically
+
+This project models that workflow in a fully local environment. It combines intent detection, persistent memory, behavioral prediction, explainable decision rules, and simulated actions without relying on external services.
 
 ## System Overview
 
@@ -20,7 +25,15 @@ User Input
 -> Response (CLI / Streamlit UI)
 ```
 
-The result is a small but complete agent loop: each message is classified, stored, analyzed against user history, scored for compliance likelihood, routed through a decision engine, and converted into a concrete system response.
+The result is a small but complete agent loop.
+
+Each message is classified, stored, analyzed against user history, scored for compliance likelihood, routed through a decision engine, and converted into a concrete system response.
+
+## Demo
+
+Run the Streamlit app to interact with the AI agent and view decision-making in real time.
+
+![AI Collections Agent Simulator demo](assets/demo-screenshot.svg)
 
 ## Architecture
 
