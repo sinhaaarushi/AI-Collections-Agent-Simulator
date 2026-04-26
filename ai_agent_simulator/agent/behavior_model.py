@@ -135,11 +135,11 @@ def build_user_profile_dict(
     """Build the feature dict from SQLite-backed summary + current turn."""
     counts = summary.intent_counts
     return {
-        "num_interactions": summary.interaction_count,
-        "num_delays": int(counts.get("delaying", 0)),
-        "num_frustrated": int(counts.get("frustrated", 0)),
-        "last_intent": last_intent,
-        "sentiment_score": float(sentiment_score),
+        "num_interactions": max(0, int(summary.interaction_count)),
+        "num_delays": max(0, int(counts.get("delaying", 0))),
+        "num_frustrated": max(0, int(counts.get("frustrated", 0))),
+        "last_intent": _normalize_intent(last_intent),
+        "sentiment_score": _clamp_sentiment(sentiment_score),
     }
 
 
@@ -163,17 +163,19 @@ class BehaviorModel:
 
 
 def _profile_to_feature_row(user_profile: Mapping[str, object]) -> List[float]:
-    last = str(user_profile.get("last_intent", "general")).strip().lower()
+    last = _normalize_intent(user_profile.get("last_intent", "general"))
     intent_idx = float(_INTENT_TO_INDEX.get(last, _INTENT_TO_INDEX["general"]))
 
     def _to_float(key: str) -> float:
         val = user_profile.get(key, 0)
         if val is None:
             return 0.0
-        return float(val)
+        try:
+            return max(0.0, float(val))
+        except (TypeError, ValueError):
+            return 0.0
 
-    sentiment = float(user_profile.get("sentiment_score", 0.0))
-    sentiment = max(-1.0, min(1.0, sentiment))
+    sentiment = _clamp_sentiment(user_profile.get("sentiment_score", 0.0))
 
     return [
         _to_float("num_interactions"),
@@ -192,3 +194,18 @@ def predict_compliance(
     """Convenience wrapper; pass ``model`` to avoid retraining on every call."""
     m = model if model is not None else BehaviorModel()
     return m.predict_compliance(user_profile)
+
+
+def _normalize_intent(value: object) -> str:
+    """Normalize arbitrary intent values into a known model category."""
+    intent = str(value or "general").strip().lower()
+    return intent if intent in _INTENT_TO_INDEX else "general"
+
+
+def _clamp_sentiment(value: object) -> float:
+    """Convert sentiment-like values into the model's expected [-1, 1] range."""
+    try:
+        raw = float(value)
+    except (TypeError, ValueError):
+        raw = 0.0
+    return max(-1.0, min(1.0, raw))
