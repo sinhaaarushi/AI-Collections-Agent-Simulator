@@ -72,9 +72,10 @@ def _print_decision_trace(
     frustrated = factors.get("num_frustrated", 0)
     compliance = float(agent_result["compliance_probability"])
     action = agent_result["action"]
+    strategy = agent_result["strategy"]
     print(
         f"[AGENT TRACE] intent={intent} delays={delays} frustrated={frustrated} "
-        f"compliance={compliance:.2f} -> action={action}",
+        f"compliance={compliance:.2f} strategy={strategy} -> action={action}",
         file=out,
     )
 
@@ -206,9 +207,11 @@ def run_repl(
             f"Decision Confidence: {float(result['decision_confidence']):.2f}",
             file=stdout,
         )
+        print(f"Strategy: {result['strategy']}", file=stdout)
         print(f"Action: {result['action']}", file=stdout)
         print(f"Reason: {result['reason']}", file=stdout)
         print(f"Response: {result['response']}", file=stdout)
+        print(f"Outcome: {result['outcome']}", file=stdout)
 
 
 def main(argv: Optional[list[str]] = None) -> int:

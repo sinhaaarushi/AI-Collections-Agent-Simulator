@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from ai_agent_simulator.agent.action_handler import execute_action
+from ai_agent_simulator.agent.action_handler import (
+    execute_action,
+    simulate_action_outcome,
+)
 from ai_agent_simulator.agent.behavior_model import (
     BehaviorModel,
     build_user_profile_dict,
@@ -61,6 +64,10 @@ class AgentOrchestrator:
         decision = decide(result.intent, profile, compliance_probability)
         action = str(decision["action"])
         response = execute_action(action, normalized_user_id)
+        strategy = _strategy_for_action(action, str(profile["current_strategy"]))
+        outcome = simulate_action_outcome(action)
+        self._memory.update_current_strategy(normalized_user_id, strategy)
+        self._memory.update_action_outcome(normalized_user_id, outcome)
 
         return {
             "intent": result.intent,
@@ -70,6 +77,8 @@ class AgentOrchestrator:
             "action": action,
             "reason": str(decision["reason"]),
             "response": response,
+            "outcome": outcome,
+            "strategy": strategy,
         }
 
     def get_decision_factors(
@@ -89,6 +98,8 @@ class AgentOrchestrator:
             "num_delays": int(summary.intent_counts.get("delaying", 0)),
             "num_frustrated": int(summary.intent_counts.get("frustrated", 0)),
             "compliance": agent_result["compliance_probability"],
+            "strategy": agent_result["strategy"],
+            "outcome": agent_result["outcome"],
         }
 
     def _build_profile(
@@ -101,11 +112,24 @@ class AgentOrchestrator:
         history = self._memory.get_user_history(user_id)
         summary = build_profile_summary(user_id, history)
         sentiment = sentiment_score_from_text(message)
-        return build_user_profile_dict(
+        profile = build_user_profile_dict(
             summary,
             last_intent=last_intent,
             sentiment_score=sentiment,
         )
+        profile["current_strategy"] = self._memory.get_current_strategy(user_id)
+        return profile
+
+
+def _strategy_for_action(action: str, current_strategy: str) -> str:
+    """Map the selected action to the persisted strategy state."""
+    if action == "send_reminder_soft":
+        return "soft_reminder"
+    if action == "send_reminder_firm":
+        return "firm_reminder"
+    if action == "escalate_to_human":
+        return "escalation"
+    return current_strategy
 
 
 _DEFAULT_ORCHESTRATOR = AgentOrchestrator()

@@ -51,6 +51,8 @@ def _render_decision_details(messages: List[Dict[str, Any]]) -> None:
             st.markdown(f"**Action:** `{result['action']}`")
             st.markdown(f"**Reason:** {result['reason']}")
             st.markdown(f"**Response:** {result['response']}")
+            st.markdown(f"**Strategy:** `{result['strategy']}`")
+            st.markdown(f"**Outcome:** {result['outcome']}")
 
             st.markdown("**Decision Factors:**")
             factors = turn.get("decision_factors", {})
@@ -61,6 +63,20 @@ def _render_decision_details(messages: List[Dict[str, Any]]) -> None:
             col4, col5 = st.columns(2)
             col4.metric("Interactions", int(factors.get("num_interactions", 0)))
             col5.metric("Compliance", f"{float(factors.get('compliance', 0.0)):.2f}")
+
+
+def _render_agent_behavior(messages: List[Dict[str, Any]]) -> None:
+    """Render the current adaptive strategy and latest simulated outcome."""
+    st.subheader("Agent Behavior")
+    if not messages:
+        st.info("Agent behavior will appear after the first message.")
+        return
+
+    latest = messages[-1]["result"]
+    col1, col2 = st.columns(2)
+    col1.metric("Current Strategy", latest["strategy"])
+    col2.metric("Action Taken", latest["action"])
+    st.write(f"**Outcome:** {latest['outcome']}")
 
 
 def main() -> None:
@@ -77,6 +93,7 @@ def main() -> None:
     st.session_state.user_id = st.text_input("User ID", st.session_state.user_id)
 
     _render_chat(st.session_state.messages)
+    _render_agent_behavior(st.session_state.messages)
 
     message = st.chat_input("Type a customer message")
     if message:
