@@ -15,7 +15,7 @@ def decide(
     intent: str,
     user_profile: Mapping[str, Any],
     predicted_compliance: float,
-) -> Dict[str, str]:
+) -> Dict[str, object]:
     """Choose the next agent action from intent and behavioral signals.
 
     Args:
@@ -24,7 +24,7 @@ def decide(
         predicted_compliance: Probability in ``[0, 1]`` from the ML model.
 
     Returns:
-        A dict with ``action`` and ``reason`` keys.
+        A dict with ``action``, ``reason``, and ``decision_confidence`` keys.
     """
     intent_norm = intent.strip().lower()
     delays = int(user_profile.get("num_delays", 0) or 0)
@@ -36,20 +36,24 @@ def decide(
         return {
             "action": "escalate_to_human",
             "reason": _reason_escalate(frustrated_turns, compliance),
+            "decision_confidence": 0.94,
         }
     if intent_norm == DELAYING:
         return {
             "action": "send_reminder",
             "reason": _reason_reminder(delays, compliance),
+            "decision_confidence": _confidence_for_delay(delays, compliance),
         }
     if intent_norm == COOPERATIVE:
         return {
             "action": "assist_user",
             "reason": _reason_assist(compliance),
+            "decision_confidence": 0.86,
         }
     return {
         "action": "standard_response",
         "reason": _reason_standard(intent_norm, compliance),
+        "decision_confidence": 0.48,
     }
 
 
@@ -96,3 +100,12 @@ def _reason_standard(intent: str, compliance: float) -> str:
         f"Nothing special for '{intent}' right now; answer normally and "
         f"watch compliance (p={compliance:.2f})"
     )
+
+
+def _confidence_for_delay(delays: int, compliance: float) -> float:
+    """Return a simple confidence score for delay-handling decisions."""
+    if delays >= 2 and compliance < 0.4:
+        return 0.92
+    if delays >= 2:
+        return 0.86
+    return 0.78
