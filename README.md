@@ -1,109 +1,91 @@
 # AI Collections Agent Simulator
 
-A local, rule-based simulator of a financial collections/support agent.
-It classifies user utterances into intents, stores the interaction
-history in SQLite, derives a small **user profile** from that history,
-and exposes a CLI for trying the flow end-to-end.
+A local AI agent system that models user interactions, predicts behavior, and makes real-time decisions using intent detection, memory, and machine learning.
 
-Everything runs offline: Python standard library only (no cloud APIs, no ML).
+## Problem Statement
 
-## First phase capabilities
+Real-world AI systems in fintech and support cannot rely on one-off message classification alone. They need to understand what a user is asking for, track behavior across interactions, predict likely outcomes, and choose the next action dynamically.
 
-| Area | What you get |
-| ---- | ------------ |
-| **Intent** | Four labels: `cooperative`, `delaying`, `frustrated`, `general`. Keyword and regex scoring, plus light sentiment hints (positive phrasing nudges cooperative; negative nudges frustrated). |
-| **Confidence** | Reported scores are soft-capped (not full 1.0) so labels feel plausible, not overconfident. |
-| **Memory** | SQLite persistence: each turn stores `user_id`, message, predicted intent, timestamp. |
-| **CLI** | Read-eval-print loop, slash commands for history and profile, optional `[AGENT DEBUG]` line after classification. |
-| **Profile** | `/profile` summarizes total turns, per-intent counts, first/last message times, and a dominant intent (ties broken by recency). |
+This project models that workflow in a fully local environment. It shows how an agent can combine intent detection, persistent memory, behavioral prediction, explainable decision rules, and simulated actions without relying on external services.
 
-## Project layout
+## System Overview
 
-```
-ai_agent_simulator/
-    __init__.py
-    app.py                       # CLI entry point
-    agent/
-        __init__.py
-        intent_classifier.py     # Rule-based intent + sentiment hints
-        memory_manager.py        # SQLite-backed interaction memory
-        profile_summary.py       # Profile aggregates from history
+```text
+User Input
+-> Intent Classification (rule-based + sentiment)
+-> Memory (SQLite interaction history)
+-> Behavior Prediction (Logistic Regression)
+-> Decision Engine (rule-based reasoning)
+-> Action Handler (simulated system actions)
+-> Response (CLI / Streamlit UI)
 ```
 
-## Requirements
+The result is a small but complete agent loop: each message is classified, stored, analyzed against user history, scored for compliance likelihood, routed through a decision engine, and converted into a concrete system response.
 
-* Python 3.10+ (uses PEP 604 `|` unions and `from __future__ import annotations`)
-* SQLite (bundled with Python via the `sqlite3` module)
+## Architecture
 
-No third-party packages are required for the Day 1 foundation. See
-`requirements.txt`.
+| Module | Responsibility |
+| ------ | -------------- |
+| `intent_classifier.py` | Detects user intent and sentiment signals from local rule-based scoring. |
+| `memory_manager.py` | Persists user interaction history in SQLite. |
+| `behavior_model.py` | Trains a local logistic regression model and predicts compliance probability. |
+| `decision_engine.py` | Selects actions using intent, behavior signals, and compliance probability. |
+| `action_handler.py` | Simulates system actions such as reminders, human escalation, and user assistance. |
+| `agent_orchestrator.py` | Controls the full pipeline from message input to final response. |
+| `streamlit_app.py` | Provides an interactive chat UI with decision details and trace output. |
 
-## Running the CLI
+## Example Scenario
 
-From the project root:
+```text
+Input: "I will pay later"
+Intent: delaying
+Compliance: 0.32
+Action: send_reminder
+Reason: repeated delay behavior with low compliance probability
+```
+
+## Key Features
+
+* Intent classification with sentiment awareness
+* Persistent memory using SQLite
+* Behavioral prediction using machine learning
+* Decision-making engine for action selection
+* Explainable reasoning and trace outputs
+* Interactive UI using Streamlit
+* Local-first architecture with no external APIs
+
+## Design Decisions
+
+**Rule-based intent first:** The intent layer is deterministic, fast, and easy to inspect. For a simulator, transparent behavior is more valuable than opaque classification.
+
+**Logistic regression for behavior prediction:** Compliance prediction uses a lightweight model that trains quickly on synthetic data, exposes meaningful probabilities, and stays easy to reason about.
+
+**SQLite for memory:** SQLite keeps the system local, persistent, and simple to run. It also mirrors the core requirement of tracking user behavior over time without needing infrastructure.
+
+**Modular architecture:** Intent classification, memory, prediction, decisions, actions, orchestration, and UI are separated so each part can evolve independently.
+
+## How to Run
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the interactive UI:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Run the CLI:
 
 ```bash
 python -m ai_agent_simulator.app
 ```
 
-Useful flags:
+Use a custom user or memory database:
 
 ```bash
 python -m ai_agent_simulator.app --user-id alice --db ./memory.db
 ```
-
-### Example session
-
-```
-AI Collections Agent Simulator (user: 'default_user'). Type /help for commands, /quit to exit.
-User: I will pay later
-[AGENT DEBUG] Intent classified as: delaying with confidence 0.90
-Detected Intent: delaying (confidence: 0.90)
-User: /profile
-Profile: 'default_user'
-  Total interactions: 1
-  First message: 2026-04-21 10:00:01
-  Last message:  2026-04-21 10:00:01
-  Intent counts:
-    delaying: 1
-  Dominant intent: delaying
-User: /quit
-```
-
-Empty lines print a short hint instead of failing silently.
-
-## CLI commands
-
-| Command | Description |
-| ------- | ----------- |
-| `/history` | Print all stored interactions for the current user. |
-| `/profile` | Print intent counts, dominant intent, and first/last message times. |
-| `/last` | Print the most recent intent for the current user. |
-| `/help` | List commands. |
-| `/quit` | Exit the REPL (Ctrl-C and Ctrl-D also work). |
-
-Anything that does not start with `/` is treated as a user utterance
-and classified.
-
-## Modules at a glance
-
-### `agent.intent_classifier`
-
-* `IntentClassifier.classify(message) -> IntentResult`
-* Intents: `cooperative`, `delaying`, `frustrated`, `general`
-* Weighted keywords, regex patterns, sentiment phrase boosts; confidence is capped below 1.0.
-
-### `agent.memory_manager`
-
-* `MemoryManager.initialize_db()`
-* `MemoryManager.store_interaction(user_id, message, intent) -> int`
-* `MemoryManager.get_user_history(user_id, limit=None) -> list[Interaction]`
-* `MemoryManager.get_last_intent(user_id) -> str | None`
-
-The SQLite schema auto-creates on first use. Default DB filename:
-`agent_memory.db` (override with `--db`).
-
-### `agent.profile_summary`
-
-* `build_profile_summary(user_id, history) -> UserProfileSummary`
-* `format_profile_summary_text(summary) -> str`
