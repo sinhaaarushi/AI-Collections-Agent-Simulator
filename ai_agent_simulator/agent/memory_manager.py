@@ -192,6 +192,32 @@ class MemoryManager:
             )
             conn.commit()
 
+    def update_action_outcome(self, user_id: str, outcome: str) -> None:
+        """Store the latest simulated action outcome for ``user_id``."""
+        if not user_id or not user_id.strip():
+            raise ValueError("user_id must be a non-empty string")
+        if not outcome or not outcome.strip():
+            raise ValueError("outcome must be a non-empty string")
+
+        self._ensure_initialized()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO user_state (
+                    user_id,
+                    current_strategy,
+                    last_outcome,
+                    updated_at
+                )
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    last_outcome = excluded.last_outcome,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (user_id, DEFAULT_STRATEGY, outcome.strip()),
+            )
+            conn.commit()
+
     # ------------------------------------------------------------------
     # Reads
     # ------------------------------------------------------------------
@@ -293,6 +319,26 @@ class MemoryManager:
             return DEFAULT_STRATEGY
         strategy = str(row["current_strategy"])
         return strategy if strategy in VALID_STRATEGIES else DEFAULT_STRATEGY
+
+    def get_last_outcome(self, user_id: str) -> Optional[str]:
+        """Return the latest simulated action outcome for ``user_id``."""
+        if not user_id or not user_id.strip():
+            return None
+
+        self._ensure_initialized()
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT last_outcome
+                FROM user_state
+                WHERE user_id = ?
+                LIMIT 1
+                """,
+                (user_id,),
+            ).fetchone()
+        if row is None or row["last_outcome"] is None:
+            return None
+        return str(row["last_outcome"])
 
     # ------------------------------------------------------------------
     # Internals

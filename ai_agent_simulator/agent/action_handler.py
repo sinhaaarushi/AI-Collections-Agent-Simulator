@@ -52,3 +52,16 @@ def execute_action(action: str, user_id: str) -> str:
     }
     handler = handlers.get(action, standard_response)
     return handler()
+
+
+def simulate_action_outcome(action: str) -> str:
+    """Return a deterministic outcome for the simulated action."""
+    outcomes = {
+        "send_reminder": "user did not respond",
+        "send_reminder_soft": "user did not respond",
+        "send_reminder_firm": "user responded but delayed again",
+        "escalate_to_human": "case forwarded to human agent",
+        "assist_user": "user received assistance and next steps",
+        "standard_response": "standard guidance delivered",
+    }
+    return outcomes.get(action, "standard guidance delivered")
