@@ -10,7 +10,19 @@ from __future__ import annotations
 
 def send_reminder(user_id: str) -> str:
     """Simulate sending a reminder to the user."""
+    return send_reminder_soft(user_id)
+
+
+def send_reminder_soft(user_id: str) -> str:
+    """Simulate a low-pressure reminder for an early delay."""
     return f"Reminder sent to user '{user_id}' regarding the pending action."
+
+
+def send_reminder_firm(user_id: str) -> str:
+    """Simulate a firmer reminder after repeated delay behavior."""
+    return (
+        f"Firm reminder sent to user '{user_id}' with a clear follow-up timeline."
+    )
 
 
 def escalate_to_human(user_id: str) -> str:
@@ -32,6 +44,8 @@ def execute_action(action: str, user_id: str) -> str:
     """Execute the named action and return the user-facing response message."""
     handlers = {
         "send_reminder": lambda: send_reminder(user_id),
+        "send_reminder_soft": lambda: send_reminder_soft(user_id),
+        "send_reminder_firm": lambda: send_reminder_firm(user_id),
         "escalate_to_human": lambda: escalate_to_human(user_id),
         "assist_user": assist_user,
         "standard_response": standard_response,
