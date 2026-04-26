@@ -21,6 +21,7 @@ User Input
 -> Memory (SQLite interaction history)
 -> Behavior Prediction (Logistic Regression)
 -> Decision Engine (rule-based reasoning)
+-> Strategy State (adaptive reminders / escalation)
 -> Action Handler (simulated system actions)
 -> Response (CLI / Streamlit UI)
 ```
@@ -53,8 +54,10 @@ Run the Streamlit app to interact with the AI agent and view decision-making in 
 Input: "I will pay later"
 Intent: delaying
 Compliance: 0.32
-Action: send_reminder
+Strategy: firm_reminder
+Action: send_reminder_firm
 Reason: repeated delay behavior with low compliance probability
+Outcome: user responded but delayed again
 ```
 
 ## Key Features
@@ -63,9 +66,22 @@ Reason: repeated delay behavior with low compliance probability
 * Persistent memory using SQLite
 * Behavioral prediction using machine learning
 * Decision-making engine for action selection
+* Adaptive strategy state for repeated behavior
 * Explainable reasoning and trace outputs
 * Interactive UI using Streamlit
 * Local-first architecture with no external APIs
+
+## Adaptive Behavior
+
+The agent updates its strategy as user behavior changes over time:
+
+* First delay: `soft_reminder`
+* Second delay: `firm_reminder`
+* Third delay: `escalation`
+
+Repeated delays move the user from reminders toward escalation, while low-compliance frustrated messages can escalate immediately.
+
+After each action, the system also simulates a simple outcome. For example, a soft reminder may produce `user did not respond`, while escalation produces `case forwarded to human agent`. This creates a lightweight feedback loop that makes the demo feel closer to a real multi-turn agent workflow.
 
 ## Design Decisions
 
