@@ -19,6 +19,8 @@ Column            Type        Notes
 ``intent``        TEXT        The intent label predicted by the agent.
 ``timestamp``     DATETIME    UTC timestamp, defaults to ``CURRENT_TIMESTAMP``.
 ================  ==========  =======================================
+
+Table ``user_state`` stores the agent's current strategy per user.
 """
 
 from __future__ import annotations
@@ -28,9 +30,15 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Union
+from typing import Iterator, List, Optional, Tuple, Union
 
 DEFAULT_DB_PATH: Path = Path("agent_memory.db")
+VALID_STRATEGIES: Tuple[str, ...] = (
+    "soft_reminder",
+    "firm_reminder",
+    "escalation",
+)
+DEFAULT_STRATEGY = "soft_reminder"
 
 _CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS interactions (
@@ -45,6 +53,15 @@ CREATE TABLE IF NOT EXISTS interactions (
 _CREATE_INDEX_SQL = """
 CREATE INDEX IF NOT EXISTS idx_interactions_user_time
     ON interactions (user_id, timestamp DESC);
+"""
+
+_CREATE_USER_STATE_SQL = """
+CREATE TABLE IF NOT EXISTS user_state (
+    user_id          TEXT PRIMARY KEY,
+    current_strategy TEXT NOT NULL,
+    last_outcome     TEXT,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -104,6 +121,7 @@ class MemoryManager:
         with self._connect() as conn:
             conn.execute(_CREATE_TABLE_SQL)
             conn.execute(_CREATE_INDEX_SQL)
+            conn.execute(_CREATE_USER_STATE_SQL)
             conn.commit()
         self._initialized = True
 
@@ -143,6 +161,36 @@ class MemoryManager:
             )
             conn.commit()
             return int(insert_result.lastrowid)
+
+    def update_current_strategy(self, user_id: str, current_strategy: str) -> None:
+        """Store the current agent strategy for ``user_id``.
+
+        Args:
+            user_id: Opaque identifier for the end user.
+            current_strategy: One of :data:`VALID_STRATEGIES`.
+
+        Raises:
+            ValueError: If the user id or strategy is invalid.
+        """
+        if not user_id or not user_id.strip():
+            raise ValueError("user_id must be a non-empty string")
+        strategy = current_strategy.strip().lower()
+        if strategy not in VALID_STRATEGIES:
+            raise ValueError(f"current_strategy must be one of {VALID_STRATEGIES}")
+
+        self._ensure_initialized()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO user_state (user_id, current_strategy, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    current_strategy = excluded.current_strategy,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (user_id, strategy),
+            )
+            conn.commit()
 
     # ------------------------------------------------------------------
     # Reads
@@ -220,6 +268,31 @@ class MemoryManager:
                 (user_id,),
             ).fetchone()
         return str(row["intent"]) if row is not None else None
+
+    def get_current_strategy(self, user_id: str) -> str:
+        """Return the latest stored strategy for ``user_id``.
+
+        Defaults to ``soft_reminder`` until the user has enough history to
+        warrant a firmer strategy.
+        """
+        if not user_id or not user_id.strip():
+            return DEFAULT_STRATEGY
+
+        self._ensure_initialized()
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT current_strategy
+                FROM user_state
+                WHERE user_id = ?
+                LIMIT 1
+                """,
+                (user_id,),
+            ).fetchone()
+        if row is None:
+            return DEFAULT_STRATEGY
+        strategy = str(row["current_strategy"])
+        return strategy if strategy in VALID_STRATEGIES else DEFAULT_STRATEGY
 
     # ------------------------------------------------------------------
     # Internals
