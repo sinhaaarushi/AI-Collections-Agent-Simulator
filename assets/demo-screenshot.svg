@@ -35,8 +35,8 @@
 
   <rect x="648" y="450" width="408" height="104" rx="12" fill="#FFFFFF" stroke="#E5E7EB"/>
   <text x="670" y="482" fill="#374151" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Decision Factors</text>
-  <text x="670" y="518" fill="#4B5563" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">intent: delaying  "  num_delays: 3</text>
-  <text x="670" y="544" fill="#4B5563" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">num_frustrated: 0  "  compliance: 0.32</text>
+  <text x="670" y="518" fill="#4B5563" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">intent: delaying | num_delays: 3</text>
+  <text x="670" y="544" fill="#4B5563" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">num_frustrated: 0 | compliance: 0.32</text>
 
   <rect x="88" y="648" width="1024" height="34" rx="17" fill="#EFF6FF"/>
   <text x="116" y="671" fill="#1D4ED8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15">Streamlit demo preview: chat input, action response, explainable decision trace.</text>
