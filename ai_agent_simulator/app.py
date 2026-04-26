@@ -22,13 +22,7 @@ import sys
 from pathlib import Path
 from typing import Optional, TextIO
 
-from ai_agent_simulator.agent.behavior_model import (
-    BehaviorModel,
-    build_user_profile_dict,
-    sentiment_score_from_text,
-)
-from ai_agent_simulator.agent.decision_engine import decide
-from ai_agent_simulator.agent.intent_classifier import IntentClassifier, IntentResult
+from ai_agent_simulator.agent.agent_orchestrator import AgentOrchestrator
 from ai_agent_simulator.agent.memory_manager import MemoryManager
 from ai_agent_simulator.agent.profile_summary import (
     build_profile_summary,
@@ -43,7 +37,7 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for the CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="ai-collections-agent",
-        description="Local AI Collections Agent Simulator (Day 2: ML + decisions).",
+        description="Local AI Collections Agent Simulator.",
     )
     parser.add_argument(
         "--user-id",
@@ -58,26 +52,28 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _print_debug_classification(result: IntentResult, out: TextIO) -> None:
+def _print_debug_classification(intent: str, confidence: float, out: TextIO) -> None:
     """Print a one-line trace-style summary after intent classification."""
     print(
-        f"[AGENT DEBUG] Intent classified as: {result.intent} "
-        f"with confidence {result.confidence:.2f}",
+        f"[AGENT DEBUG] Intent classified as: {intent} "
+        f"with confidence {confidence:.2f}",
         file=out,
     )
 
 
 def _print_decision_trace(
-    profile: dict[str, object],
-    compliance: float,
-    action: str,
+    factors: dict[str, object],
+    agent_result: dict[str, object],
     out: TextIO,
 ) -> None:
     """Print profile counts and outcome for quick operator visibility."""
-    delays = profile.get("num_delays", 0)
-    frustrated = profile.get("num_frustrated", 0)
+    intent = factors.get("intent", "unknown")
+    delays = factors.get("num_delays", 0)
+    frustrated = factors.get("num_frustrated", 0)
+    compliance = float(agent_result["compliance_probability"])
+    action = agent_result["action"]
     print(
-        f"[AGENT TRACE] history delays={delays} frustrated={frustrated} "
+        f"[AGENT TRACE] intent={intent} delays={delays} frustrated={frustrated} "
         f"compliance={compliance:.2f} -> action={action}",
         file=out,
     )
@@ -139,9 +135,8 @@ def _handle_command(
 
 
 def run_repl(
-    classifier: IntentClassifier,
+    orchestrator: AgentOrchestrator,
     memory: MemoryManager,
-    behavior_model: BehaviorModel,
     user_id: str,
     *,
     stdin: Optional[TextIO] = None,
@@ -150,9 +145,8 @@ def run_repl(
     """Run the interactive classification loop until EOF or ``/quit``.
 
     Args:
-        classifier: The intent classifier to use.
+        orchestrator: Pipeline controller for classification, prediction, and actions.
         memory: The memory manager used to persist interactions.
-        behavior_model: Trained compliance model (synthetic training data).
         user_id: Identifier for the current conversational user.
         stdin: Input stream. Defaults to :data:`sys.stdin`.
         stdout: Output stream. Defaults to :data:`sys.stdout`.
@@ -194,37 +188,36 @@ def run_repl(
                 return
             continue
 
-        result = classifier.classify(message)
-        _print_debug_classification(result, stdout)
-        memory.store_interaction(user_id, message, result.intent)
-
-        history = memory.get_user_history(user_id)
-        summary = build_profile_summary(user_id, history)
-        last_intent = memory.get_last_intent(user_id) or result.intent
-        sentiment = sentiment_score_from_text(message)
-        profile = build_user_profile_dict(
-            summary,
-            last_intent=last_intent,
-            sentiment_score=sentiment,
+        result = orchestrator.run(user_id, message)
+        factors = orchestrator.get_decision_factors(user_id, result)
+        _print_debug_classification(
+            str(result["intent"]),
+            float(result["confidence"]),
+            stdout,
         )
-        compliance_prob = behavior_model.predict_compliance(profile)
-        decision = decide(result.intent, profile, compliance_prob)
-        _print_decision_trace(profile, compliance_prob, decision["action"], stdout)
+        _print_decision_trace(factors, result, stdout)
 
-        print(f"Intent: {result.intent}", file=stdout)
-        print(f"Compliance Probability: {compliance_prob:.2f}", file=stdout)
-        print(f"Action: {decision['action']}", file=stdout)
-        print(f"Reason: {decision['reason']}", file=stdout)
+        print(f"Intent: {result['intent']}", file=stdout)
+        print(
+            f"Compliance Probability: {float(result['compliance_probability']):.2f}",
+            file=stdout,
+        )
+        print(
+            f"Decision Confidence: {float(result['decision_confidence']):.2f}",
+            file=stdout,
+        )
+        print(f"Action: {result['action']}", file=stdout)
+        print(f"Reason: {result['reason']}", file=stdout)
+        print(f"Response: {result['response']}", file=stdout)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
     """CLI entry point. Returns a process exit code."""
     args = _parse_args(argv)
-    classifier = IntentClassifier()
     memory = MemoryManager(db_path=args.db)
-    behavior_model = BehaviorModel()
+    orchestrator = AgentOrchestrator(memory=memory)
     try:
-        run_repl(classifier, memory, behavior_model, args.user_id)
+        run_repl(orchestrator, memory, args.user_id)
     except KeyboardInterrupt:
         print("\nExiting.")
         return 130
