@@ -21,6 +21,9 @@ Column            Type        Notes
 ================  ==========  =======================================
 
 Table ``user_state`` stores the agent's current strategy per user.
+
+Table ``aggregate_metrics`` holds simple running counts of reminder vs
+escalation actions (per database file) for lightweight observability.
 """
 
 from __future__ import annotations
@@ -30,7 +33,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 DEFAULT_DB_PATH: Path = Path("agent_memory.db")
 VALID_STRATEGIES: Tuple[str, ...] = (
@@ -63,6 +66,18 @@ CREATE TABLE IF NOT EXISTS user_state (
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
+
+_CREATE_AGGREGATE_METRICS_SQL = """
+CREATE TABLE IF NOT EXISTS aggregate_metrics (
+    id                INTEGER PRIMARY KEY CHECK (id = 1),
+    reminder_count    INTEGER NOT NULL DEFAULT 0,
+    escalation_count  INTEGER NOT NULL DEFAULT 0
+);
+"""
+
+_REMINDER_ACTIONS: frozenset[str] = frozenset(
+    {"send_reminder", "send_reminder_soft", "send_reminder_firm"}
+)
 
 
 @dataclass(frozen=True)
@@ -122,6 +137,13 @@ class MemoryManager:
             conn.execute(_CREATE_TABLE_SQL)
             conn.execute(_CREATE_INDEX_SQL)
             conn.execute(_CREATE_USER_STATE_SQL)
+            conn.execute(_CREATE_AGGREGATE_METRICS_SQL)
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO aggregate_metrics (id, reminder_count, escalation_count)
+                VALUES (1, 0, 0)
+                """
+            )
             conn.commit()
         self._initialized = True
 
@@ -339,6 +361,55 @@ class MemoryManager:
         if row is None or row["last_outcome"] is None:
             return None
         return str(row["last_outcome"])
+
+    def record_action_metric(self, action: str) -> None:
+        """Increment reminder or escalation counters after an executed action."""
+        if not action or not action.strip():
+            return
+        act = action.strip()
+        self._ensure_initialized()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO aggregate_metrics (id, reminder_count, escalation_count)
+                VALUES (1, 0, 0)
+                """
+            )
+            if act in _REMINDER_ACTIONS:
+                conn.execute(
+                    """
+                    UPDATE aggregate_metrics
+                    SET reminder_count = reminder_count + 1
+                    WHERE id = 1
+                    """
+                )
+            elif act == "escalate_to_human":
+                conn.execute(
+                    """
+                    UPDATE aggregate_metrics
+                    SET escalation_count = escalation_count + 1
+                    WHERE id = 1
+                    """
+                )
+            conn.commit()
+
+    def get_action_metrics(self) -> Dict[str, int]:
+        """Return cumulative reminder and escalation counts for this database."""
+        self._ensure_initialized()
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT reminder_count, escalation_count
+                FROM aggregate_metrics
+                WHERE id = 1
+                """
+            ).fetchone()
+        if row is None:
+            return {"reminder_count": 0, "escalation_count": 0}
+        return {
+            "reminder_count": int(row["reminder_count"]),
+            "escalation_count": int(row["escalation_count"]),
+        }
 
     # ------------------------------------------------------------------
     # Internals

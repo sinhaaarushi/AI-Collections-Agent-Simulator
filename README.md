@@ -46,6 +46,8 @@ Dark-themed UI preview (matches GitHub-inspired dark palette used in config):
 
 ![Streamlit dark theme preview](assets/streamlit-dark-preview.svg)
 
+When you have captures from your machine, replace the `.svg` paths above with real `.png` screenshots (same filenames work if you keep paths unchanged).
+
 Scenario flow (three-turn escalation script):
 
 ![Scenario demo script flow](assets/scenario-demo-flow.svg)
@@ -101,6 +103,14 @@ Outcome: user responded but delayed again
 * Explainable reasoning and trace outputs
 * Interactive UI using Streamlit
 * Local-first architecture with no external APIs
+
+## Observability (lightweight)
+
+The SQLite database keeps **running counters** (per DB file) for **reminder actions** (soft, firm, or legacy `send_reminder`) and **escalations** (`escalate_to_human`). The CLI and Streamlit footer surface the latest totals so you can sanity-check volume the same way you might glance at metrics in a real system.
+
+## Robustness
+
+If **intent classifier confidence** falls below **0.35**, the orchestrator **skips specialized routing** and returns a **standard response** with an explicit reason, instead of forcing a delay or frustration branch on a weak match.
 
 ## Adaptive Behavior
 

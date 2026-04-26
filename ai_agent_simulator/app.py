@@ -212,6 +212,12 @@ def run_repl(
         print(f"Reason: {result['reason']}", file=stdout)
         print(f"Response: {result['response']}", file=stdout)
         print(f"Outcome: {result['outcome']}", file=stdout)
+        m = result.get("metrics", {})
+        print(
+            f"Metrics (this DB): reminders={m.get('reminder_count', 0)} "
+            f"escalations={m.get('escalation_count', 0)}",
+            file=stdout,
+        )
 
 
 def main(argv: Optional[list[str]] = None) -> int:

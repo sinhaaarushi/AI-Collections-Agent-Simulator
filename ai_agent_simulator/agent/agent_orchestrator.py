@@ -18,6 +18,9 @@ from ai_agent_simulator.agent.intent_classifier import IntentClassifier
 from ai_agent_simulator.agent.memory_manager import MemoryManager
 from ai_agent_simulator.agent.profile_summary import build_profile_summary
 
+# Below this, intent labels are treated as uncertain and get a safe default path.
+_LOW_INTENT_CONFIDENCE_THRESHOLD = 0.35
+
 
 class AgentOrchestrator:
     """Coordinate intent, memory, prediction, decisions, and actions."""
@@ -61,13 +64,25 @@ class AgentOrchestrator:
 
         profile = self._build_profile(normalized_user_id, normalized_message, result.intent)
         compliance_probability = self._behavior_model.predict_compliance(profile)
-        decision = decide(result.intent, profile, compliance_probability)
+        if result.confidence < _LOW_INTENT_CONFIDENCE_THRESHOLD:
+            decision = {
+                "action": "standard_response",
+                "reason": (
+                    "Classifier confidence is low; using a safe standard response "
+                    "instead of a specialized path"
+                ),
+                "decision_confidence": 0.55,
+            }
+        else:
+            decision = decide(result.intent, profile, compliance_probability)
         action = str(decision["action"])
         response = execute_action(action, normalized_user_id)
         strategy = _strategy_for_action(action, str(profile["current_strategy"]))
         outcome = simulate_action_outcome(action)
         self._memory.update_current_strategy(normalized_user_id, strategy)
         self._memory.update_action_outcome(normalized_user_id, outcome)
+        self._memory.record_action_metric(action)
+        metrics = self._memory.get_action_metrics()
 
         return {
             "intent": result.intent,
@@ -79,6 +94,7 @@ class AgentOrchestrator:
             "response": response,
             "outcome": outcome,
             "strategy": strategy,
+            "metrics": metrics,
         }
 
     def get_decision_factors(

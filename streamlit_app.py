@@ -131,6 +131,13 @@ def main() -> None:
 
     _render_decision_details(st.session_state.messages)
 
+    if st.session_state.messages:
+        m = st.session_state.messages[-1]["result"].get("metrics", {})
+        st.caption(
+            f"**Metrics (this DB):** reminders **{m.get('reminder_count', 0)}** · "
+            f"escalations **{m.get('escalation_count', 0)}**"
+        )
+
 
 if __name__ == "__main__":
     main()
