@@ -29,6 +29,7 @@ def decide(
     intent_norm = intent.strip().lower()
     delays = int(user_profile.get("num_delays", 0) or 0)
     frustrated_turns = int(user_profile.get("num_frustrated", 0) or 0)
+    current_strategy = str(user_profile.get("current_strategy", "soft_reminder"))
     compliance = float(predicted_compliance)
     compliance = max(0.0, min(1.0, compliance))
 
@@ -39,10 +40,11 @@ def decide(
             "decision_confidence": 0.94,
         }
     if intent_norm == DELAYING:
+        action = _action_for_delay_count(delays)
         return {
-            "action": "send_reminder",
-            "reason": _reason_reminder(delays, compliance),
-            "decision_confidence": _confidence_for_delay(delays, compliance),
+            "action": action,
+            "reason": _reason_for_delay_strategy(delays, current_strategy),
+            "decision_confidence": _confidence_for_delay(delays, compliance, action),
         }
     if intent_norm == COOPERATIVE:
         return {
@@ -69,17 +71,30 @@ def _reason_escalate(frustrated_turns: int, compliance: float) -> str:
     )
 
 
-def _reason_reminder(delays: int, compliance: float) -> str:
-    if delays >= 2 and compliance < 0.4:
+def _action_for_delay_count(delays: int) -> str:
+    """Map repeated delay behavior to the next action."""
+    if delays <= 1:
+        return "send_reminder_soft"
+    if delays == 2:
+        return "send_reminder_firm"
+    return "escalate_to_human"
+
+
+def _reason_for_delay_strategy(delays: int, current_strategy: str) -> str:
+    """Explain how delay history changes the agent's strategy."""
+    if delays <= 1:
         return (
-            "User shows repeated delay behavior with low compliance probability"
+            "First delay detected; starting with a soft reminder to keep the "
+            "conversation cooperative"
         )
-    if delays >= 2:
+    if delays == 2:
         return (
-            "User shows repeated delay behavior; a structured reminder is appropriate"
+            "User delayed again; escalating strategy from soft reminder to "
+            "firm reminder"
         )
     return (
-        "Deferring payment this time; a reminder with a firm date usually helps"
+        "User has shown repeated delay behavior across multiple interactions; "
+        f"escalating strategy from {current_strategy} to escalation"
     )
 
 
@@ -102,10 +117,10 @@ def _reason_standard(intent: str, compliance: float) -> str:
     )
 
 
-def _confidence_for_delay(delays: int, compliance: float) -> float:
+def _confidence_for_delay(delays: int, compliance: float, action: str) -> float:
     """Return a simple confidence score for delay-handling decisions."""
-    if delays >= 2 and compliance < 0.4:
-        return 0.92
-    if delays >= 2:
+    if action == "escalate_to_human":
+        return 0.94 if compliance < 0.5 else 0.9
+    if delays == 2:
         return 0.86
     return 0.78
