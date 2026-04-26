@@ -1,0 +1,20 @@
+<svg width="900" height="420" viewBox="0 0 900 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="420" rx="20" fill="#161b22"/>
+  <text x="40" y="52" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Scenario demo script</text>
+  <text x="40" y="82" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="15">Same user, three messages in order (fresh user_id)</text>
+
+  <rect x="40" y="110" width="820" height="72" rx="12" fill="#21262d" stroke="#30363d"/>
+  <text x="60" y="148" fill="#58a6ff" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">1.</text>
+  <text x="88" y="148" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="17">User: I will pay later</text>
+  <text x="88" y="172" fill="#3fb950" font-family="Segoe UI, Arial, sans-serif" font-size="16">’ soft reminder · send_reminder_soft · strategy: soft_reminder</text>
+
+  <rect x="40" y="198" width="820" height="72" rx="12" fill="#21262d" stroke="#30363d"/>
+  <text x="60" y="236" fill="#58a6ff" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">2.</text>
+  <text x="88" y="236" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="17">User: Not now</text>
+  <text x="88" y="260" fill="#d29922" font-family="Segoe UI, Arial, sans-serif" font-size="16">’ firm reminder · send_reminder_firm · strategy: firm_reminder</text>
+
+  <rect x="40" y="286" width="820" height="72" rx="12" fill="#21262d" stroke="#30363d"/>
+  <text x="60" y="324" fill="#58a6ff" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">3.</text>
+  <text x="88" y="324" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="17">User: Stop messaging me</text>
+  <text x="88" y="348" fill="#f85149" font-family="Segoe UI, Arial, sans-serif" font-size="16">’ escalation · escalate_to_human · strategy: escalation</text>
+</svg>

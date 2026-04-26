@@ -34,7 +34,38 @@ Each message is classified, stored, analyzed against user history, scored for co
 
 Run the Streamlit app to interact with the AI agent and view decision-making in real time.
 
+The UI uses a **dark theme** by default via `.streamlit/config.toml` when you run Streamlit from the project root.
+
+### Screenshots (reference previews)
+
+Light layout reference (original wireframe-style preview):
+
 ![AI Collections Agent Simulator demo](assets/demo-screenshot.svg)
+
+Dark-themed UI preview (matches GitHub-inspired dark palette used in config):
+
+![Streamlit dark theme preview](assets/streamlit-dark-preview.svg)
+
+Scenario flow (three-turn escalation script):
+
+![Scenario demo script flow](assets/scenario-demo-flow.svg)
+
+## Scenario Demo Script
+
+Use a **fresh User ID** in the Streamlit sidebar (or a new SQLite file) so delay counts start at zero. Send these three messages **in order** for the same user:
+
+```text
+User: I will pay later
+→ soft reminder (action: send_reminder_soft, strategy: soft_reminder)
+
+User: Not now
+→ firm reminder (action: send_reminder_firm, strategy: firm_reminder)
+
+User: Stop messaging me
+→ escalation (action: escalate_to_human, strategy: escalation)
+```
+
+Verified against the local pipeline: message 1 and 2 classify as `delaying` (second turn triggers the firm reminder path), message 3 classifies as `frustrated` and escalates when compliance probability is below the engine threshold.
 
 ## Architecture
 

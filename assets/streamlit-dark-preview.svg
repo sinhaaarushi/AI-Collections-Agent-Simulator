@@ -1,0 +1,37 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" rx="28" fill="#0d1117"/>
+  <rect x="48" y="42" width="1104" height="676" rx="24" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+
+  <text x="88" y="104" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700">AI Collections Agent Simulator</text>
+  <text x="88" y="142" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="18">Dark theme  chat, strategy, and decision trace</text>
+
+  <rect x="88" y="176" width="492" height="438" rx="18" fill="#0d1117" stroke="#30363d"/>
+  <text x="116" y="222" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Chat</text>
+
+  <rect x="116" y="252" width="408" height="68" rx="16" fill="#1f6feb33" stroke="#388bfd"/>
+  <text x="140" y="292" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="18">I will pay later</text>
+
+  <rect x="116" y="344" width="408" height="96" rx="16" fill="#23863633" stroke="#3fb950"/>
+  <text x="140" y="382" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="18">Reminder sent to user regarding</text>
+  <text x="140" y="412" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="18">the pending action.</text>
+
+  <rect x="116" y="536" width="408" height="52" rx="16" fill="#21262d" stroke="#484f58"/>
+  <text x="140" y="569" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="16">Type a customer message</text>
+
+  <rect x="620" y="176" width="492" height="200" rx="18" fill="#0d1117" stroke="#30363d"/>
+  <text x="648" y="222" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Agent Behavior</text>
+  <text x="648" y="258" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="16">Current Strategy</text>
+  <text x="648" y="288" fill="#58a6ff" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">soft_reminder</text>
+  <text x="880" y="258" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="16">Action Taken</text>
+  <text x="880" y="288" fill="#3fb950" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">send_reminder_soft</text>
+  <text x="648" y="340" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="16">Outcome: user did not respond</text>
+
+  <rect x="620" y="394" width="492" height="220" rx="18" fill="#0d1117" stroke="#30363d"/>
+  <text x="648" y="438" fill="#e6edf3" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Decision Details</text>
+  <text x="648" y="478" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="16">Intent: delaying | Compliance: 0.53</text>
+  <text x="648" y="508" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="16">Decision confidence: 0.78</text>
+  <text x="648" y="538" fill="#8b949e" font-family="Segoe UI, Arial, sans-serif" font-size="16">Delays: 1 | Frustrated: 0</text>
+
+  <rect x="88" y="648" width="1024" height="34" rx="17" fill="#1f6feb22"/>
+  <text x="116" y="671" fill="#58a6ff" font-family="Segoe UI, Arial, sans-serif" font-size="15">Streamlit dark theme via .streamlit/config.toml (preview mock)</text>
+</svg>

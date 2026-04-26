@@ -12,6 +12,22 @@ from ai_agent_simulator.agent.agent_orchestrator import (
 )
 
 
+def _inject_theme_style() -> None:
+    """Light CSS tweaks on top of Streamlit theme from .streamlit/config.toml."""
+    st.markdown(
+        """
+        <style>
+        footer {visibility: hidden;}
+        [data-testid="stToolbar"] {visibility: hidden;}
+        div[data-testid="stExpander"] details {
+            border-color: #30363d;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _init_session_state() -> None:
     """Initialize Streamlit session state used by the chat demo."""
     if "messages" not in st.session_state:
@@ -85,6 +101,7 @@ def main() -> None:
         page_title="AI Collections Agent Simulator",
         layout="centered",
     )
+    _inject_theme_style()
     _init_session_state()
 
     st.title("AI Collections Agent Simulator")
